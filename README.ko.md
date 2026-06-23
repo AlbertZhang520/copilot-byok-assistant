@@ -6,6 +6,15 @@ Copilot BYOK Assistant는 사용자 지정 BYOK Provider를 통해 GitHub Copilo
 
 이 저장소에는 Provider 인증 정보, 비공개 엔드포인트, 로컬 shell alias, 머신별 경로가 포함되어 있지 않습니다. Provider 설정은 환경 변수 또는 로컬 `.env` 파일로 구성하세요.
 
+## 사용 사례
+
+- **Codex-Copilot 교차 개발**: Codex가 로컬에서 구현이나 리팩터링을 수행한 뒤, BYOK Provider를 통해 Copilot CLI에 계획, diff, 누락된 테스트를 검토하게 할 수 있습니다.
+- **이중 에이전트 코드 리뷰**: 한 assistant는 주요 구현을 담당하고, 다른 assistant는 독립 reviewer로 사용해 merge 전에 두 번째 의견을 얻습니다.
+- **Provider 비교**: BYOK endpoint나 모델 이름을 바꿔 가며 추론 품질, 코드 리뷰 엄격도, 지연 시간, 비용을 Codex workflow 변경 없이 비교합니다.
+- **컴플라이언스와 비공개 라우팅**: 팀이 승인한 Provider, gateway, 네트워크 경로로 Copilot CLI를 호출하고 인증 정보는 저장소 밖에 둡니다.
+- **디버깅 지원**: 실패한 명령 출력과 로그를 Copilot CLI에 전달해 근본 원인 가설을 얻고, 제안된 확인 절차를 로컬에서 검증합니다.
+- **테스트와 릴리스 계획**: Codex가 구현을 준비한 뒤 누락된 테스트 케이스, 경계 조건, 릴리스 체크, 회귀 위험을 점검합니다.
+
 ## 설치
 
 이 저장소를 Codex skills 디렉터리에 clone 합니다:

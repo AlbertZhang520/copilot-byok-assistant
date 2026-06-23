@@ -6,6 +6,15 @@ A provider-neutral Codex skill for consulting GitHub Copilot CLI through a custo
 
 It does not include provider credentials, private endpoints, local shell aliases, or machine-specific paths. Configure your provider through environment variables or a local `.env` file.
 
+## Use Cases
+
+- **Codex-Copilot cross-development**: let Codex implement or refactor locally, then ask Copilot CLI through your BYOK provider to critique the plan, review the diff, or identify missing tests.
+- **Dual-agent code review**: use one assistant as the primary implementer and the other as an independent reviewer before merging.
+- **Provider comparison**: switch BYOK endpoints or model names to compare reasoning quality, code review strictness, latency, and cost without changing the Codex workflow.
+- **Compliance and private routing**: route Copilot CLI through a provider, gateway, or network path approved by your team while keeping credentials outside the repository.
+- **Debugging support**: pass failing command output to Copilot CLI for root-cause hypotheses, then verify the suggested checks locally.
+- **Test and release planning**: ask for missing test cases, risky edge conditions, rollout checks, and regression areas after Codex prepares an implementation.
+
 ## Install
 
 Clone this repository into your Codex skills directory:
