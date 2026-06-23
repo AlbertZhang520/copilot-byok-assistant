@@ -1,0 +1,4 @@
+interface:
+  display_name: "Copilot BYOK Assistant"
+  short_description: "Use Copilot CLI with custom providers."
+  default_prompt: "Use $copilot-byok-assistant to consult Copilot CLI through my configured custom provider."
