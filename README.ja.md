@@ -57,12 +57,46 @@ Codex から Skill として呼び出すこともできます：
 Use $copilot-byok-assistant to consult my configured Copilot CLI provider on this implementation plan.
 ```
 
+## 長時間タスク
+
+他の code agent が Copilot CLI の完了前に待機をやめる可能性がある場合は、非同期モードを使います：
+
+```bash
+run_id=$(./scripts/run-copilot-byok.sh start -- -p "Review this large refactor. Do not modify files." --silent)
+./scripts/run-copilot-byok.sh wait "$run_id" --timeout 25
+./scripts/run-copilot-byok.sh status "$run_id"
+./scripts/run-copilot-byok.sh logs "$run_id" --tail 80
+```
+
+非同期コマンド：
+
+- `start`：supervisor の下で Copilot CLI を起動し、run ID を出力してすぐに戻ります。
+- `status <run_id>`：状態、経過時間、アイドル時間、理由、終了コードを表示します。
+- `wait <run_id> --timeout N`：呼び出し側の待機予算だけ待ちます。実行中なら `state=running` を返し、Copilot は終了しません。
+- `logs <run_id>`：stdout を表示します。`--stderr` または `--events` で他のログを確認できます。
+- `cancel <run_id>`：Copilot のプロセスグループを終了し、run を cancelled として記録します。
+- `list`：最近の run を表示します。
+
+タイムアウトは分離されています：
+
+- `wait --timeout`：呼び出し側の待機予算だけであり、タスク失敗ではありません。
+- `start --max-wall`：タスク全体の実行時間上限です。デフォルトは `600` 秒、終了コードは `125` です。
+- `start --idle-timeout`：出力がない状態のタイムアウトです。デフォルトは `120` 秒、終了コードは `124` です。
+
 ## セキュリティ
 
 - `.env`、API key、Bearer token、プライベートエンドポイント、内部モデル名を commit しないでください。
 - もし secret を過去に commit したことがある場合は、新しいリポジトリを作成するか、公開前に Git 履歴をクリーンアップしてください。
 - モデルの出力は参考情報として扱い、コード変更や結論の報告前にローカルの証拠で検証してください。
 - `agents/openai.yaml` は Skill テンプレートが生成する Codex UI メタデータであり、この Skill が OpenAI Provider 専用であることを意味しません。
+
+## Release Notes
+
+### 2026-06-26
+
+- 長時間の Copilot CLI タスク向けに、`start`、`status`、`wait`、`logs`、`cancel`、`list` を追加しました。
+- 外側の agent の待機予算、最大実行時間、無出力ハング検出を独立して扱うタイムアウト制御を追加しました。
+- `.copilot-byok/runs/` に status JSON、stdout/stderr ログ、イベントログを保存する run ディレクトリを追加しました。
 
 ## ライセンス
 

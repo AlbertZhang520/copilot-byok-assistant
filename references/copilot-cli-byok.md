@@ -71,6 +71,34 @@ Debugging:
 Given this failing command and output, identify likely root causes and the next checks. Do not modify files.
 ```
 
+## Long-Running Tasks
+
+Use async mode when the caller may stop waiting before Copilot CLI finishes.
+
+```bash
+run_id=$(./scripts/run-copilot-byok.sh start -- -p "Review this large change. Do not modify files." --silent)
+./scripts/run-copilot-byok.sh wait "$run_id" --timeout 25
+./scripts/run-copilot-byok.sh status "$run_id"
+./scripts/run-copilot-byok.sh logs "$run_id" --tail 80
+```
+
+Commands:
+
+- `start`: create a run directory, launch Copilot CLI under a supervisor, print `run_id`, and return immediately.
+- `status <run_id>`: print machine-readable state, elapsed time, idle time, reason, and exit code.
+- `wait <run_id> --timeout N`: wait for up to `N` seconds. If the run is still active, return `state=running` without killing it.
+- `logs <run_id>`: print stdout; add `--stderr` or `--events` for other logs.
+- `cancel <run_id>`: terminate the Copilot process group and mark the run as cancelled.
+- `list`: show recent runs.
+
+Timeouts:
+
+- `--max-wall N` on `start`: hard wall-clock cap. Default: `600` seconds. Terminal state: `timed_out`, exit code `125`.
+- `--idle-timeout N` on `start`: no-output timeout. Default: `120` seconds. Terminal state: `idle_timeout`, exit code `124`.
+- `wait --timeout N`: caller wait budget only. It does not cancel the run.
+
+Run files are stored under `.copilot-byok/runs/<run_id>/` by default. Set `COPILOT_BYOK_RUNS_DIR` to override this location.
+
 ## Troubleshooting
 
 Run:
@@ -78,6 +106,7 @@ Run:
 ```bash
 ./scripts/run-copilot-byok.sh --check
 ./scripts/run-copilot-byok.sh --print-config
+./scripts/run-copilot-byok.sh list
 copilot help providers
 copilot help environment
 ```

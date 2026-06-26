@@ -73,6 +73,10 @@ print_config() {
   } | redact
 }
 
+run_async() {
+  exec python3 "${script_dir}/copilot_byok_async.py" "$@"
+}
+
 case "${1:-}" in
   --check)
     check_config
@@ -86,12 +90,28 @@ case "${1:-}" in
 Usage:
   scripts/run-copilot-byok.sh --check
   scripts/run-copilot-byok.sh --print-config
+  scripts/run-copilot-byok.sh start [--max-wall N] [--idle-timeout N] -- [copilot arguments...]
+  scripts/run-copilot-byok.sh status <run-id>
+  scripts/run-copilot-byok.sh wait <run-id> [--timeout N]
+  scripts/run-copilot-byok.sh logs <run-id> [--stderr|--events] [--tail N] [--follow]
+  scripts/run-copilot-byok.sh cancel <run-id>
+  scripts/run-copilot-byok.sh list [--limit N]
   scripts/run-copilot-byok.sh [copilot arguments...]
 
 Configuration:
   Set COPILOT_BYOK_* variables in the environment or in a local .env file.
   See .env.example and references/copilot-cli-byok.md.
 EOF
+    ;;
+  start)
+    check_config
+    shift
+    run_async start "$@"
+    ;;
+  status|wait|logs|cancel|list)
+    cmd="$1"
+    shift
+    run_async "$cmd" "$@"
     ;;
   *)
     check_config

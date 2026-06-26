@@ -57,12 +57,46 @@ $EDITOR .env
 Use $copilot-byok-assistant to consult my configured Copilot CLI provider on this implementation plan.
 ```
 
+## 长任务
+
+当其他 code agent 可能在 Copilot CLI 完成前停止等待时，使用异步模式：
+
+```bash
+run_id=$(./scripts/run-copilot-byok.sh start -- -p "Review this large refactor. Do not modify files." --silent)
+./scripts/run-copilot-byok.sh wait "$run_id" --timeout 25
+./scripts/run-copilot-byok.sh status "$run_id"
+./scripts/run-copilot-byok.sh logs "$run_id" --tail 80
+```
+
+异步命令：
+
+- `start`：由 supervisor 启动 Copilot CLI，打印 run ID，并立即返回。
+- `status <run_id>`：查看状态、运行时间、空闲时间、原因和退出码。
+- `wait <run_id> --timeout N`：只等待调用方预算。如果任务仍在运行，返回 `state=running`，不会杀掉 Copilot。
+- `logs <run_id>`：查看 stdout；用 `--stderr` 或 `--events` 查看其他日志。
+- `cancel <run_id>`：终止 Copilot 进程组，并把任务标记为 cancelled。
+- `list`：查看最近任务。
+
+超时语义是分开的：
+
+- `wait --timeout`：只是调用方等待预算，不代表任务失败。
+- `start --max-wall`：任务总运行时长硬上限，默认 `600` 秒，退出码 `125`。
+- `start --idle-timeout`：无输出超时，默认 `120` 秒，退出码 `124`。
+
 ## 安全
 
 - 不要提交 `.env`、API key、Bearer token、私有端点或内部模型名。
 - 如果密钥曾经被提交过，请创建全新仓库或清理 Git 历史后再发布。
 - 模型输出只作为参考；在修改代码或汇报结论前，用本地证据验证。
 - `agents/openai.yaml` 是 Skill 模板生成的 Codex UI 元数据，并不表示该 Skill 只支持 OpenAI Provider。
+
+## Release Notes
+
+### 2026-06-26
+
+- 新增长任务异步管理：`start`、`status`、`wait`、`logs`、`cancel`、`list`。
+- 新增独立超时控制：外层 agent 等待预算、任务总运行时长、无输出卡死检测分别处理。
+- 新增 `.copilot-byok/runs/` 任务目录，保存 status JSON、stdout/stderr 日志和事件日志。
 
 ## 许可证
 

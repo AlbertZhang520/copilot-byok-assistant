@@ -26,6 +26,15 @@ Run a read-only consultation:
 ./scripts/run-copilot-byok.sh -p "Review the current git diff for correctness bugs. Do not modify files." --silent
 ```
 
+Start a long-running consultation without blocking the caller:
+
+```bash
+run_id=$(./scripts/run-copilot-byok.sh start -- -p "Review this large refactor. Do not modify files." --silent)
+./scripts/run-copilot-byok.sh wait "$run_id" --timeout 25
+./scripts/run-copilot-byok.sh status "$run_id"
+./scripts/run-copilot-byok.sh logs "$run_id" --tail 80
+```
+
 Inspect sanitized configuration:
 
 ```bash
@@ -46,7 +55,9 @@ Inspect sanitized configuration:
 
 4. Verify advisory output independently. Do not let Copilot CLI replace direct evidence.
 
-5. If a prompt may have caused edits, inspect `git status --short` and relevant diffs immediately.
+5. Use `start` plus bounded `wait --timeout` for long tasks so outer agents do not confuse their own wait timeout with Copilot task failure.
+
+6. If a prompt may have caused edits, inspect `git status --short` and relevant diffs immediately.
 
 ## Invocation Patterns
 
