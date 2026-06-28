@@ -113,7 +113,12 @@ if [[ "$staged" -eq 1 && -n "$diff_range" ]]; then
   exit 2
 fi
 
-repo_root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+if repo_root="$(git rev-parse --show-toplevel 2>/dev/null)"; then
+  is_git_repo=1
+else
+  repo_root="$(pwd)"
+  is_git_repo=0
+fi
 tmp="$(mktemp)"
 redacted_tmp="$(mktemp)"
 trap 'rm -f "$tmp" "$redacted_tmp"' EXIT
@@ -153,6 +158,7 @@ append_file() {
 }
 
 append_untracked_files() {
+  [[ "$is_git_repo" -eq 1 ]] || return 0
   local found=0
   while IFS= read -r file; do
     [[ -n "$file" ]] || continue
@@ -182,11 +188,27 @@ append_untracked_files() {
 } >>"$tmp"
 
 if [[ "$include_status" -eq 1 ]]; then
-  append_cmd "Git Status" git -C "$repo_root" status --short --branch
+  if [[ "$is_git_repo" -eq 1 ]]; then
+    append_cmd "Git Status" git -C "$repo_root" status --short --branch
+  else
+    section "Git Status"
+    {
+      echo '```text'
+      echo "Not a git repository."
+      echo '```'
+    } >>"$tmp"
+  fi
 fi
 
 if [[ "$include_diff" -eq 1 || "$staged" -eq 1 ]]; then
-  if [[ "$staged" -eq 1 ]]; then
+  if [[ "$is_git_repo" -eq 0 ]]; then
+    section "Git Diff"
+    {
+      echo '```text'
+      echo "Not a git repository."
+      echo '```'
+    } >>"$tmp"
+  elif [[ "$staged" -eq 1 ]]; then
     append_cmd "Git Diff Stat (staged)" git -C "$repo_root" diff --staged --stat
     append_untracked_files
     append_cmd "Git Diff (staged)" git -C "$repo_root" diff --staged --unified=80
