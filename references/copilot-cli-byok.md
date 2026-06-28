@@ -71,6 +71,52 @@ Debugging:
 Given this failing command and output, identify likely root causes and the next checks. Do not modify files.
 ```
 
+## Structured Agent Collaboration
+
+For repeatable collaboration between a primary code agent and Copilot CLI, prefer `consult` presets over ad hoc prompts:
+
+```bash
+./scripts/pack-context.sh --status --diff --output /tmp/copilot-context.md
+./scripts/run-copilot-byok.sh consult review --context /tmp/copilot-context.md --async --wait-timeout 30
+```
+
+With `consult --async --wait-timeout`, stdout remains the run ID so callers can safely use `run_id=$(...)`; the bounded wait status is written to stderr.
+
+List available presets:
+
+```bash
+./scripts/run-copilot-byok.sh consult --list-templates
+```
+
+Available presets:
+
+- `review`: adversarial diff review after a candidate implementation.
+- `plan-critique`: plan review before editing.
+- `spec-rederive`: independent task interpretation for ambiguous work.
+- `test-design`: cross-agent test ideas from the task/spec.
+- `debug-root-cause`: root-cause hypotheses for failing commands or tests.
+- `blast-radius`: production and integration risk review.
+
+Use `references/collaboration-protocol.md` for the full role protocol, consultation gates, finding contract, and adjudication rules. The primary agent owns verification. Copilot findings are hypotheses until reproduced or confirmed with local evidence.
+
+Build a bounded, redacted context packet:
+
+```bash
+./scripts/pack-context.sh --status --diff --output /tmp/context.md
+./scripts/pack-context.sh --staged --file src/main.ts --log /tmp/test-output.log --output /tmp/context.md
+```
+
+Retrieve the final result block from an async run:
+
+```bash
+./scripts/run-copilot-byok.sh result <run_id>
+./scripts/run-copilot-byok.sh result <run_id> --json
+./scripts/run-copilot-byok.sh result <run_id> --status-code
+```
+
+Prompt presets ask Copilot to return a `BEGIN_RESULT` / `END_RESULT` block. The async runner stores the extracted content in `.copilot-byok/runs/<run_id>/result.txt` when the run finishes.
+By default, `result` exits `0` after retrieving output even if the run itself timed out or failed; add `--status-code` when the caller wants the run's terminal exit code.
+
 ## Long-Running Tasks
 
 Use async mode when the caller may stop waiting before Copilot CLI finishes.
@@ -80,6 +126,7 @@ run_id=$(./scripts/run-copilot-byok.sh start -- -p "Review this large change. Do
 ./scripts/run-copilot-byok.sh wait "$run_id" --timeout 25
 ./scripts/run-copilot-byok.sh status "$run_id"
 ./scripts/run-copilot-byok.sh logs "$run_id" --tail 80
+./scripts/run-copilot-byok.sh result "$run_id"
 ```
 
 Commands:
@@ -88,6 +135,7 @@ Commands:
 - `status <run_id>`: print machine-readable state, elapsed time, idle time, reason, and exit code.
 - `wait <run_id> --timeout N`: wait for up to `N` seconds. If the run is still active, return `state=running` without killing it.
 - `logs <run_id>`: print stdout; add `--stderr` or `--events` for other logs.
+- `result <run_id>`: print the final extracted `BEGIN_RESULT` block when present, otherwise stdout.
 - `cancel <run_id>`: terminate the Copilot process group and mark the run as cancelled.
 - `list`: show recent runs.
 
@@ -106,6 +154,7 @@ Run:
 ```bash
 ./scripts/run-copilot-byok.sh --check
 ./scripts/run-copilot-byok.sh --print-config
+./scripts/run-copilot-byok.sh consult --list-templates
 ./scripts/run-copilot-byok.sh list
 copilot help providers
 copilot help environment

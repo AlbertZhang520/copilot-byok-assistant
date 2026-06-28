@@ -57,6 +57,26 @@ Codex から Skill として呼び出すこともできます：
 Use $copilot-byok-assistant to consult my configured Copilot CLI provider on this implementation plan.
 ```
 
+## Agent コラボレーション
+
+Copilot を一度だけの ad hoc prompt ではなく、別の code agent との協働相手として使う場合は、構造化 preset を使います：
+
+```bash
+./scripts/pack-context.sh --status --diff --output /tmp/copilot-context.md
+./scripts/run-copilot-byok.sh consult review --context /tmp/copilot-context.md --async --wait-timeout 30
+```
+
+利用可能な preset：
+
+- `review`：diff に対する adversarial review。
+- `plan-critique`：実装計画の批評。
+- `spec-rederive`：タスク理解の独立した再導出。
+- `test-design`：agent 間で使うテスト案。
+- `debug-root-cause`：失敗原因の分析。
+- `blast-radius`：本番・連携リスクの評価。
+
+Preset prompt は Copilot に `BEGIN_RESULT` / `END_RESULT` の結果ブロックを返すよう求めます。非同期 run の完了後は `result <run_id>` で抽出済みの回答を読めます。
+
 ## 長時間タスク
 
 他の code agent が Copilot CLI の完了前に待機をやめる可能性がある場合は、非同期モードを使います：
@@ -66,6 +86,7 @@ run_id=$(./scripts/run-copilot-byok.sh start -- -p "Review this large refactor. 
 ./scripts/run-copilot-byok.sh wait "$run_id" --timeout 25
 ./scripts/run-copilot-byok.sh status "$run_id"
 ./scripts/run-copilot-byok.sh logs "$run_id" --tail 80
+./scripts/run-copilot-byok.sh result "$run_id"
 ```
 
 非同期コマンド：
@@ -74,6 +95,7 @@ run_id=$(./scripts/run-copilot-byok.sh start -- -p "Review this large refactor. 
 - `status <run_id>`：状態、経過時間、アイドル時間、理由、終了コードを表示します。
 - `wait <run_id> --timeout N`：呼び出し側の待機予算だけ待ちます。実行中なら `state=running` を返し、Copilot は終了しません。
 - `logs <run_id>`：stdout を表示します。`--stderr` または `--events` で他のログを確認できます。
+- `result <run_id>`：抽出済みの結果ブロックを表示します。結果ブロックがない場合は stdout を表示します。
 - `cancel <run_id>`：Copilot のプロセスグループを終了し、run を cancelled として記録します。
 - `list`：最近の run を表示します。
 
@@ -91,6 +113,13 @@ run_id=$(./scripts/run-copilot-byok.sh start -- -p "Review this large refactor. 
 - `agents/openai.yaml` は Skill テンプレートが生成する Codex UI メタデータであり、この Skill が OpenAI Provider 専用であることを意味しません。
 
 ## Release Notes
+
+### 2026-06-28
+
+- `consult <preset>` による構造化 agent collaboration preset を追加しました。
+- 境界づけられ、redact された context packet を生成する `scripts/pack-context.sh` を追加しました。
+- `result <run_id>` を追加し、`BEGIN_RESULT` / `END_RESULT` を含む非同期 run の `result.txt` を保存するようにしました。
+- role、consultation gate、finding contract、adjudication rule を含む collaboration protocol を追加しました。
 
 ### 2026-06-26
 

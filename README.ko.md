@@ -57,6 +57,26 @@ Codex에서 Skill로 호출할 수도 있습니다:
 Use $copilot-byok-assistant to consult my configured Copilot CLI provider on this implementation plan.
 ```
 
+## Agent 협업
+
+Copilot을 일회성 ad hoc prompt 답변이 아니라 다른 code agent와 협업하는 reviewer로 사용할 때는 구조화 preset을 사용하세요:
+
+```bash
+./scripts/pack-context.sh --status --diff --output /tmp/copilot-context.md
+./scripts/run-copilot-byok.sh consult review --context /tmp/copilot-context.md --async --wait-timeout 30
+```
+
+사용 가능한 preset:
+
+- `review`: diff에 대한 adversarial review.
+- `plan-critique`: 구현 계획 비평.
+- `spec-rederive`: 작업 이해를 독립적으로 재도출.
+- `test-design`: cross-agent 테스트 아이디어.
+- `debug-root-cause`: 실패 원인 분석.
+- `blast-radius`: production 및 integration risk review.
+
+Preset prompt는 Copilot이 `BEGIN_RESULT` / `END_RESULT` 결과 블록을 반환하도록 요청합니다. 비동기 run이 완료된 뒤 `result <run_id>`로 추출된 답변을 읽을 수 있습니다.
+
 ## 장시간 작업
 
 다른 code agent가 Copilot CLI 완료 전에 대기를 중단할 수 있는 경우 비동기 모드를 사용하세요:
@@ -66,6 +86,7 @@ run_id=$(./scripts/run-copilot-byok.sh start -- -p "Review this large refactor. 
 ./scripts/run-copilot-byok.sh wait "$run_id" --timeout 25
 ./scripts/run-copilot-byok.sh status "$run_id"
 ./scripts/run-copilot-byok.sh logs "$run_id" --tail 80
+./scripts/run-copilot-byok.sh result "$run_id"
 ```
 
 비동기 명령:
@@ -74,6 +95,7 @@ run_id=$(./scripts/run-copilot-byok.sh start -- -p "Review this large refactor. 
 - `status <run_id>`: 상태, 경과 시간, idle 시간, 이유, 종료 코드를 표시합니다.
 - `wait <run_id> --timeout N`: 호출자의 대기 예산만큼만 기다립니다. 아직 실행 중이면 `state=running`을 반환하고 Copilot을 종료하지 않습니다.
 - `logs <run_id>`: stdout을 표시합니다. `--stderr` 또는 `--events`로 다른 로그를 볼 수 있습니다.
+- `result <run_id>`: 추출된 결과 블록을 표시합니다. 결과 블록이 없으면 stdout을 표시합니다.
 - `cancel <run_id>`: Copilot 프로세스 그룹을 종료하고 run을 cancelled로 표시합니다.
 - `list`: 최근 run을 표시합니다.
 
@@ -91,6 +113,13 @@ timeout은 서로 분리되어 있습니다:
 - `agents/openai.yaml`은 Skill 템플릿이 생성한 Codex UI 메타데이터이며, 이 Skill이 OpenAI Provider 전용이라는 뜻은 아닙니다.
 
 ## Release Notes
+
+### 2026-06-28
+
+- `consult <preset>`을 통한 구조화 agent collaboration preset을 추가했습니다.
+- bounded/redacted context packet을 생성하는 `scripts/pack-context.sh`를 추가했습니다.
+- `result <run_id>`를 추가하고, `BEGIN_RESULT` / `END_RESULT`를 포함한 비동기 run의 `result.txt`를 저장하도록 했습니다.
+- role, consultation gate, finding contract, adjudication rule을 다루는 collaboration protocol을 추가했습니다.
 
 ### 2026-06-26
 

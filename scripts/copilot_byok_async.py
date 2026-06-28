@@ -14,6 +14,8 @@ from typing import Optional
 
 
 TERMINAL_STATES = {"succeeded", "failed", "timed_out", "idle_timeout", "cancelled", "launch_error"}
+BEGIN_RESULT = "BEGIN_RESULT"
+END_RESULT = "END_RESULT"
 
 
 def now() -> float:
@@ -21,7 +23,7 @@ def now() -> float:
 
 
 def iso(ts: Optional[float] = None) -> str:
-    return datetime.fromtimestamp(ts or now(), timezone.utc).isoformat().replace("+00:00", "Z")
+    return datetime.fromtimestamp(now() if ts is None else ts, timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def repo_dir() -> Path:
@@ -108,6 +110,17 @@ def status_snapshot(path: Path, persist: bool = False) -> dict:
 
 def print_json(data: dict) -> None:
     print(json.dumps(data, indent=2, sort_keys=True))
+
+
+def extract_result_text(text: str) -> str:
+    start = text.find(BEGIN_RESULT)
+    if start >= 0:
+        body_start = start + len(BEGIN_RESULT)
+        end = text.find(END_RESULT, body_start)
+        if end >= 0:
+            return text[body_start:end].strip()
+        return text[body_start:].strip()
+    return text.strip()
 
 
 def kill_process_group(pid: int, grace_s: int) -> None:
@@ -314,6 +327,10 @@ def supervise(args: argparse.Namespace) -> int:
     if existing.get("state") == "cancelled":
         append_event(path, {"event": "finish_after_cancel", "exit_code": 130})
         return 130
+    if stdout_path.exists():
+        result_text = extract_result_text(stdout_path.read_text(encoding="utf-8", errors="replace"))
+        if result_text:
+            (path / "result.txt").write_text(result_text + "\n", encoding="utf-8")
     update_status(
         path,
         state=terminal_state or "failed",
@@ -390,6 +407,39 @@ def logs(args: argparse.Namespace) -> int:
         return 2
     name = "events.log" if args.events else "stderr.log" if args.stderr else "stdout.log"
     return output_file(path / name, args.follow, args.tail)
+
+
+def result(args: argparse.Namespace) -> int:
+    path = run_dir(args.run_id)
+    if not status_path(path).exists():
+        print(f"unknown run_id: {args.run_id}", file=sys.stderr)
+        return 2
+
+    data = status_snapshot(path, persist=True)
+    result_path = path / "result.txt"
+    stdout_path = path / "stdout.log"
+    text = ""
+    if result_path.exists() and not args.raw:
+        text = result_path.read_text(encoding="utf-8", errors="replace").strip()
+    elif stdout_path.exists():
+        text = stdout_path.read_text(encoding="utf-8", errors="replace")
+        if not args.raw:
+            text = extract_result_text(text)
+        text = text.strip()
+
+    if args.json:
+        print_json({
+            "run_id": args.run_id,
+            "state": data.get("state"),
+            "exit_code": data.get("exit_code"),
+            "result": text,
+        })
+    elif text:
+        print(text)
+
+    if args.status_code and data.get("state") in TERMINAL_STATES:
+        return int(data.get("exit_code") or terminal_exit_code(data["state"]))
+    return 0
 
 
 def cancel(args: argparse.Namespace) -> int:
@@ -473,6 +523,13 @@ def main() -> int:
     p.add_argument("--follow", action="store_true")
     p.add_argument("--tail", type=int)
     p.set_defaults(func=logs)
+
+    p = sub.add_parser("result")
+    p.add_argument("run_id")
+    p.add_argument("--raw", action="store_true")
+    p.add_argument("--json", action="store_true")
+    p.add_argument("--status-code", action="store_true", help="exit with the run's terminal status code")
+    p.set_defaults(func=result)
 
     p = sub.add_parser("cancel")
     p.add_argument("run_id")

@@ -57,6 +57,26 @@ $EDITOR .env
 Use $copilot-byok-assistant to consult my configured Copilot CLI provider on this implementation plan.
 ```
 
+## Agent 协作
+
+当 Copilot 需要和另一个 code agent 协作，而不是只回答一次临时 prompt 时，使用结构化 presets：
+
+```bash
+./scripts/pack-context.sh --status --diff --output /tmp/copilot-context.md
+./scripts/run-copilot-byok.sh consult review --context /tmp/copilot-context.md --async --wait-timeout 30
+```
+
+可用 presets：
+
+- `review`：对 diff 做对抗式审查。
+- `plan-critique`：审查实现计划。
+- `spec-rederive`：独立复述任务理解。
+- `test-design`：生成跨 agent 测试思路。
+- `debug-root-cause`：分析失败根因。
+- `blast-radius`：评估生产和集成风险。
+
+Preset prompt 会要求 Copilot 返回 `BEGIN_RESULT` / `END_RESULT` 结果块。异步 run 完成后，用 `result <run_id>` 读取提取后的答案。
+
 ## 长任务
 
 当其他 code agent 可能在 Copilot CLI 完成前停止等待时，使用异步模式：
@@ -66,6 +86,7 @@ run_id=$(./scripts/run-copilot-byok.sh start -- -p "Review this large refactor. 
 ./scripts/run-copilot-byok.sh wait "$run_id" --timeout 25
 ./scripts/run-copilot-byok.sh status "$run_id"
 ./scripts/run-copilot-byok.sh logs "$run_id" --tail 80
+./scripts/run-copilot-byok.sh result "$run_id"
 ```
 
 异步命令：
@@ -74,6 +95,7 @@ run_id=$(./scripts/run-copilot-byok.sh start -- -p "Review this large refactor. 
 - `status <run_id>`：查看状态、运行时间、空闲时间、原因和退出码。
 - `wait <run_id> --timeout N`：只等待调用方预算。如果任务仍在运行，返回 `state=running`，不会杀掉 Copilot。
 - `logs <run_id>`：查看 stdout；用 `--stderr` 或 `--events` 查看其他日志。
+- `result <run_id>`：查看提取后的结果块；没有结果块时显示 stdout。
 - `cancel <run_id>`：终止 Copilot 进程组，并把任务标记为 cancelled。
 - `list`：查看最近任务。
 
@@ -91,6 +113,13 @@ run_id=$(./scripts/run-copilot-byok.sh start -- -p "Review this large refactor. 
 - `agents/openai.yaml` 是 Skill 模板生成的 Codex UI 元数据，并不表示该 Skill 只支持 OpenAI Provider。
 
 ## Release Notes
+
+### 2026-06-28
+
+- 通过 `consult <preset>` 新增结构化 agent 协作 presets。
+- 新增 `scripts/pack-context.sh`，用于生成有边界且经过脱敏的上下文包。
+- 新增 `result <run_id>`，并为包含 `BEGIN_RESULT` / `END_RESULT` 的异步 run 持久化 `result.txt`。
+- 新增协作协议，覆盖角色分工、调用门槛、finding contract 和分歧裁决规则。
 
 ### 2026-06-26
 
